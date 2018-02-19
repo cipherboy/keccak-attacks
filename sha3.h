@@ -13,11 +13,11 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#define l 6
+#define l 3
 #define b (25*(1 << l))
 #define w (b/25)
-#define inttype uint64_t
-#define PRIit PRIu64
+#define inttype uint8_t
+#define PRIit PRIu8
 
 #define State inttype**
 
@@ -58,7 +58,7 @@ void print_state(State s, char *name) {
     printf("\n");
 }
 
-State keccaktheta(State in, int round) {
+State keccaktheta(State in, uint32_t round) {
     inttype *C = calloc(5, sizeof(inttype));
     inttype *D = calloc(5, sizeof(inttype));
     State out = new_state();
@@ -77,7 +77,7 @@ State keccaktheta(State in, int round) {
     return out;
 }
 
-State keccakrho(State in, int round) {
+State keccakrho(State in, uint32_t round) {
     State out = copy_state(in);
     size_t x = 1;
     size_t y = 0;
@@ -89,7 +89,7 @@ State keccakrho(State in, int round) {
     return out;
 }
 
-State keccakpi(State in, int round) {
+State keccakpi(State in, uint32_t round) {
     State out = copy_state(in);
     for (size_t x = 0; x < 5; x++) {
         for (size_t y = 0; y < 5; y++) {
@@ -100,7 +100,7 @@ State keccakpi(State in, int round) {
     return out;
 }
 
-State keccakchi(State in, int round) {
+State keccakchi(State in, uint32_t round) {
     State out = copy_state(in);
     for (size_t x = 0; x < 5; x++) {
         for (size_t y = 0; y < 5; y++) {
@@ -111,43 +111,53 @@ State keccakchi(State in, int round) {
     return out;
 }
 
-uint8_t keccakrc(uint32_t t) {
+inttype keccakrc(uint32_t t) {
     if ((t % 255) == 0) {
         return 1;
     }
 
-    r = 1;
+    uint16_t r = 1;
+
     for (size_t i = 1; i < (t % 255) + 1; i++) {
         r = (r << 1);
-        r = r ^ (r >> 8);
-        r = r ^ (r >> 4);
-        r = r ^ (r >> 3);
-        r = r ^ (r >> 2);
+        r = r ^ (((r >> 8) & 1) << 0);
+        r = r ^ (((r >> 8) & 1) << 4);
+        r = r ^ (((r >> 8) & 1) << 5);
+        r = r ^ (((r >> 8) & 1) << 6);
         r = r & 255;
     }
 
-    return (r&1);
+    return (inttype)(r&1);
 }
 
-inttype keccakrcinttype(int round) {
+inttype keccakrcinttype(uint32_t round) {
     inttype r = 0;
-    for (size_t j = 0; j < l; j++) {
-
+    inttype o = 0;
+    for (size_t j = 0; j <= l; j++) {
+        o = keccakrc(j + 7*round);
+        r = r | (o << ((1 << j) - 1));
     }
     return r;
 }
 
-State keccakiota(State in, int round) {
-
+State keccakiota(State in, uint32_t round) {
+    State out = copy_state(in);
+    out[0][0] = in[0][0] ^ keccakrcinttype(round);
+    return out;
 }
 
-State keccakf(State in, int round) {
-
+State keccakf(State in, uint32_t round) {
+    State int1 = keccaktheta(in, round);
+    State int2 = keccakrho(int1, round);
+    State int3 = keccakpi(int2, round);
+    State int4 = keccakchi(int3, round);
+    State int5 = keccakiota(int4, round);
+    return int5;
 }
 
 State keccakp(State in) {
     State s = copy_state(in);
-    for (int i = 0; i < 24; i++) {
+    for (uint32_t i = 0; i < 24; i++) {
         keccakf(s, i);
     }
     return s;
