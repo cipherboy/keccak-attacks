@@ -22,7 +22,7 @@
 #define State inttype**
 
 inttype rotr(inttype x, inttype shift) {
-    return (x >> shift) | (x << (w - shift ));
+    return (x << shift) | (x >> (w - shift ));
 }
 
 State new_state() {
@@ -32,6 +32,17 @@ State new_state() {
     for (size_t i = 0; i < 5; i++) {
         s[i] = calloc(5, sizeof(inttype));
         assert(s[i] != NULL);
+    }
+
+    return s;
+}
+
+State create_state(inttype* data) {
+    State s = new_state();
+    for (size_t y = 0; y < 5; y++) {
+        for (size_t x = 0; x < 5; x++) {
+            s[x][y] = data[5*y + x];
+        }
     }
 
     return s;
@@ -82,8 +93,11 @@ State keccakrho(State in, uint32_t round) {
     size_t x = 1;
     size_t y = 0;
     for (size_t t = 0; t <= 23; t++) {
-        out[x][y] = rotr(in[x][y], ((t+1)*(t+2))/2 % w);
-        x, y = y, (2*x + 3*y) % 5;
+        out[x][y] = rotr(in[x][y], (((t+1)*(t+2))/2) % w);
+        size_t nx = y;
+        size_t ny = (2*x + 3*y) % 5;
+        x = nx;
+        y = ny;
     }
 
     return out;
