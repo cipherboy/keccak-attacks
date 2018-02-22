@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json, sys
+import numpy
 
 print(sys.argv)
 
@@ -33,10 +34,8 @@ print("Beginning merge...")
 
 a[0] += b[0]
 n = len(a[1])
-for i in range(0, n):
-    for j in range(0, n):
-        for k in range(1, 6):
-            a[k][i][j] += b[k][i][j]
+for k in range(1, 6):
+    a[k] = numpy.add(a[k], b[k]).tolist()
 
 print("Done")
 print("Writing...")
