@@ -3,7 +3,7 @@
 
 ./build.sh
 
-num_process=`cat /proc/cpuinfo | grep 'processor' | wc -l`
+num_processes=4
 job_tmp="$HOME/keccak-attacks-tmp"
 
 mkdir -p $job_tmp
@@ -15,11 +15,11 @@ wait
 
 echo "Done waiting"
 
-python3 merge.py $job_tmp/m1.txt $job_tmp/m2.txt $job_tmp/merged.txt
-rm $job_tmp/m1.txt $job_tmp/m2.txt
+python3 merge.py $job_tmp/m3.txt $job_tmp/m4.txt $job_tmp/mm2.txt &
+python3 merge.py $job_tmp/m1.txt $job_tmp/m2.txt $job_tmp/mm1.txt &
+wait
+rm $job_tmp/m1.txt $job_tmp/m2.txt $job_tmp/m3.txt $job_tmp/m4.txt
 
-for i in `seq 3 $num_process`; do
-    python3 merge.py $job_tmp/m$i.txt $job_tmp/merged.txt $job_tmp/merged.txt
-    rm $job_tmp/m$i.txt
-done
+python3 merge.py $job_tmp/mm1.txt $job_tmp/mm2.txt $job_tmp/merged.txt
+rm $job_tmp/mm1.txt $job_tmp/mm2.txt
 
