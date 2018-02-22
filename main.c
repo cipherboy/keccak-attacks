@@ -30,7 +30,7 @@ int main() {
     uint8_t rand_data[256];
     size_t rand_index = 256;
 
-    int max_count = 1000;
+    int max_count = 60000;
 
     printf("[[");
     for (int c = 0; c < max_count; c++) {
