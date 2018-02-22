@@ -1,6 +1,10 @@
 #include "stdio.h"
-#include "sha3.h"
 #include "stdint.h"
+
+#define width 16
+#include "matrix.h"
+
+#include "sha3.h"
 
 int test_iota_w8(void) {
     printf("Testing Keccak - iota: w8\n");
@@ -128,6 +132,15 @@ int test_chi_w8(void) {
     return 0;
 }
 
+int test_matrix_record() {
+    m_init();
+    m_record(5, 0, 0, 0);
+    m_record(5, 0, 82, 8);
+    m_record(16, 8, 0, 0);
+    m_record(16, 8, 82, 8);
+    m_print();
+}
+
 
 int main() {
     test_theta_w8();
@@ -135,4 +148,5 @@ int main() {
     test_pi_w8();
     test_chi_w8();
     test_iota_w8();
+    test_matrix_record();
 }

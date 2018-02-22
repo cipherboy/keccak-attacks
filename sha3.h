@@ -13,16 +13,16 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#define l 3
-#define b (25*(1 << l))
-#define w (b/25)
+#define s_l 3
+#define s_b (25*(1 << s_l))
+#define s_w (s_b/25)
 #define inttype uint8_t
 #define PRIit PRIu8
 
 #define State inttype**
 
 inttype rotr(inttype x, inttype shift) {
-    return (x << shift) | (x >> (w - shift ));
+    return (x << shift) | (x >> (s_w - shift ));
 }
 
 State new_state() {
@@ -48,6 +48,14 @@ State create_state(inttype* data) {
     return s;
 }
 
+void flaten_state(State s, inttype *out) {
+    for (size_t y = 0; y < 5; y++) {
+        for (size_t x = 0; x < 5; x++) {
+            out[5*y + x] = s[x][y];
+        }
+    }
+}
+
 State copy_state(State in) {
     State cpy = new_state();
 
@@ -68,6 +76,7 @@ void print_state(State s, char *name) {
     }
     printf("\n");
 }
+
 
 State keccaktheta(State in, uint32_t round) {
     inttype *C = calloc(5, sizeof(inttype));
@@ -93,7 +102,7 @@ State keccakrho(State in, uint32_t round) {
     size_t x = 1;
     size_t y = 0;
     for (size_t t = 0; t <= 23; t++) {
-        out[x][y] = rotr(in[x][y], (((t+1)*(t+2))/2) % w);
+        out[x][y] = rotr(in[x][y], (((t+1)*(t+2))/2) % s_w);
         size_t nx = y;
         size_t ny = (2*x + 3*y) % 5;
         x = nx;
@@ -147,7 +156,7 @@ inttype keccakrc(uint32_t t) {
 inttype keccakrcinttype(uint32_t round) {
     inttype r = 0;
     inttype o = 0;
-    for (size_t j = 0; j <= l; j++) {
+    for (size_t j = 0; j <= s_l; j++) {
         o = keccakrc(j + 7*round);
         r = r | (o << ((1 << j) - 1));
     }
