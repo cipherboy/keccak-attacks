@@ -3,7 +3,7 @@
 
 ./build.sh
 
-num_processes=4
+num_process=4
 job_tmp="$HOME/keccak-attacks-tmp"
 
 mkdir -p $job_tmp
