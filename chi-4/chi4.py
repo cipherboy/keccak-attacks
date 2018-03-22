@@ -3,11 +3,16 @@
 import hash_framework as hf
 import itertools, random
 
-theta = hf.algorithms._sha3.sha3theta
-pi = hf.algorithms._sha3.sha3pi
-rho = hf.algorithms._sha3.sha3rho
-chi = hf.algorithms._sha3.sha3chi
+from ufds import UFDS
 
+theta = hf.algorithms._sha3.sha3theta
+rho = hf.algorithms._sha3.sha3rho
+pi = hf.algorithms._sha3.sha3pi
+chi = hf.algorithms._sha3.sha3chi
+iota = hf.algorithms._sha3.sha3iota
+
+def sha3r(w, s, r):
+    return iota(w, chi(w, pi(w, rho(w, theta(w, s)))), r)
 
 def random_state(w=1):
     s = ""
@@ -131,8 +136,64 @@ def prove_identity_theta():
                 print(r['h1in'], r['h1out'])
             assert(False)
 
+def to_state(w, i):
+    s = ['F'] * (25*w)
+    b = "0" * (25*w)
+    b = (b+bin(i)[2:])
+    b = b[len(b) - (25*w):len(b)]
+    assert(len(b) == (25*w))
+
+    return list(b.replace('0', 'F').replace('1', 'T'))
+
+def to_number(w, s):
+    assert(len(s) == 25*w)
+    return int(''.join(s).replace('F', '0').replace('T', '1'), 2)
+
+def find_identity_sha3(w=1, rounds=1):
+    print("Creating UFDS data structure...")
+    u = UFDS(2**(25*w))
+
+    print("Iterating the range...")
+    for i in range(0, 2**(25*w)):
+        s = to_state(w, i)
+        for r in range(0, rounds):
+            s = sha3r(w, s, r)
+
+        j = to_number(w, s)
+        u.union(i, j)
+
+        if (i % (2**(25*w) // 100)) == 0:
+            print(i)
+
+    print("Generating sizes...")
+    u.size(0)
+    gs = set()
+    for p in u.sizes:
+        gs.add(u.sizes[p])
+    print(gs)
+
 
 # prove_identity_rho64()
 # prove_identity_pi24()
 # prove_identity_chi4()
-prove_identity_theta()
+# prove_identity_theta()
+
+def profile_func(func):
+    import cProfile, pstats
+    pr = cProfile.Profile()
+    pr.enable()
+    func()
+    pr.disable()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr).sort_stats(sortby)
+    ps.print_stats()
+    print(hf.boolean.get_simplify_stats())
+
+def a():
+    import sys
+    assert(len(sys.argv) == 2)
+    r = int(sys.argv[1])
+    find_identity_sha3(w=1, rounds=r)
+
+# profile_func(a)
+a()
