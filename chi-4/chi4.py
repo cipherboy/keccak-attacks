@@ -11,9 +11,112 @@ pi = hf.algorithms._sha3.sha3pi
 chi = hf.algorithms._sha3.sha3chi
 iota = hf.algorithms._sha3.sha3iota
 
+def sha3i(w, x, y, z):
+    return w*(5*y + x) + z
+
+def ftheta(w, s):
+    ns = [None]*len(s)
+    c = {}
+    d = {}
+    for x in range(0, 5):
+        for z in range(0, w):
+            c[(x, z)] = s[sha3i(w, x, 0, z)] ^ s[sha3i(w, x, 1, z)] ^ s[sha3i(w, x, 2, z)] ^ s[sha3i(w, x, 3, z)] ^ s[sha3i(w, x, 4, z)]
+
+    for x in range(0, 5):
+        for z in range(0, w):
+            d[(x, z)] = c[((x - 1) % 5, z)] ^ c[((x + 1) % 5, (z + 1) % w)]
+
+    for x in range(0, 5):
+        for y in range(0, 5):
+            for z in range(0, w):
+                ns[sha3i(w, x, y, z)] = s[sha3i(w, x, y, z)] ^ d[(x, z)]
+
+    return ns
+
+
+def frho(w, s):
+    ns = [None]*len(s)
+    for z in range(0, w):
+        ns[sha3i(w, 0, 0, z)] = s[sha3i(w, 0, 0, z)]
+
+    x = 1
+    y = 0
+
+    for t in range(0, 24):
+        for z in range(0, w):
+            nz = (z + (t+1)*(t+2)//2)%w
+            ns[sha3i(w, x, y, z)] = s[sha3i(w, x, y, nz)]
+        x, y = (y, (2*x + 3*y) % 5)
+
+    return ns
+
+def fpi(w, s):
+    ns = [None]*len(s)
+
+    for x in range(0, 5):
+        for y in range(0, 5):
+            for z in range(0, w):
+                nx = (x + 3*y) % 5
+                ns[sha3i(w, x, y, z)] = s[sha3i(w, nx, x, z)]
+
+    return ns
+
+def fchi(w, s):
+    ns = [None]*len(s)
+
+    for x in range(0, 5):
+        for y in range(0, 5):
+            for z in range(0, w):
+                nx1 = (x + 1) % 5
+                nx2 = (x + 2) % 5
+                ns[sha3i(w, x, y, z)] = s[sha3i(w, x, y, z)] ^ ((not s[sha3i(w, nx1, y, z)]) and s[sha3i(w, nx2, y, z)])
+
+    return ns
+
+def sha3rc(t):
+    if (t % 255) == 0:
+        return True
+
+    r = [True, False, False, False, False, False, False, False]
+    for i in range(1, (t % 255) + 1):
+        r = ['F'] + r
+        r[0] = r[0] ^ r[8]
+        r[4] = r[4] ^ r[8]
+        r[5] = r[5] ^ r[8]
+        r[6] = r[6] ^ r[8]
+        r = r[0:8]
+
+    return r[0]
+
+def sha3RC(w, i):
+    RC = [False]*w
+    l = int(math.log(w, 2))
+
+    for j in range(0, l+1):
+        RC[(1 << j) - 1] = sha3rc(j + 7*i)
+
+    return list(reversed(RC))
+
+def fiota(w, s, i):
+    ns = [None]*len(s)
+
+    for x in range(0, 5):
+        for y in range(0, 5):
+            for z in range(0, w):
+                ns[sha3i(w, x, y, z)] = s[sha3i(w, x, y, z)]
+
+    RC = sha3RC(w, i)
+
+    for z in range(0, w):
+        ns[sha3i(w, 0, 0, z)] = ns[sha3i(w, 0, 0, z)] ^ RC[z]
+
+    return ns
+
+
 def sha3r(w, s, r):
     # return iota(w, chi(w, pi(w, rho(w, theta(w, s)))), r)
-    return theta(w, s)
+    return ftheta(w, s)
+
 
 def random_state(w=1):
     s = ""
@@ -138,17 +241,26 @@ def prove_identity_theta():
             assert(False)
 
 def to_state(w, i):
-    s = ['F'] * (25*w)
+    s = [False] * (25*w)
     b = "0" * (25*w)
     b = (b+bin(i)[2:])
     b = b[len(b) - (25*w):len(b)]
     assert(len(b) == (25*w))
+    for p in range(0, len(b)):
+        if b[p] == '1':
+            s[p] = True
 
-    return list(b.replace('0', 'F').replace('1', 'T'))
+    return s
 
 def to_number(w, s):
     assert(len(s) == 25*w)
-    return int(''.join(s).replace('F', '0').replace('T', '1'), 2)
+    ns = []
+    for e in s:
+        if e:
+            ns.append('T')
+        else:
+            ns.append('F')
+    return int(''.join(ns).replace('F', '0').replace('T', '1'), 2)
 
 def find_identity_sha3(w=1, rounds=1):
     print("Creating UFDS data structure...")
@@ -169,10 +281,15 @@ def find_identity_sha3(w=1, rounds=1):
     print("Generating sizes...")
     u.size(0)
     gs = set()
+    inv = {}
     for p in u.sizes:
-        gs.add(u.sizes[p])
-    print(u.sizes)
+        s = u.sizes[p]
+        gs.add(s)
+        inv[s] = inv.get(s, 0) + 1
+    # print(u.sizes)
+    print(inv)
     print(gs)
+
 
 
 # prove_identity_rho64()
@@ -197,5 +314,5 @@ def a():
     r = int(sys.argv[1])
     find_identity_sha3(w=1, rounds=r)
 
-# profile_func(a)
-a()
+profile_func(a)
+# a()
