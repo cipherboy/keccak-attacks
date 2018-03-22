@@ -12,7 +12,8 @@ chi = hf.algorithms._sha3.sha3chi
 iota = hf.algorithms._sha3.sha3iota
 
 def sha3r(w, s, r):
-    return iota(w, chi(w, pi(w, rho(w, theta(w, s)))), r)
+    # return iota(w, chi(w, pi(w, rho(w, theta(w, s)))), r)
+    return theta(w, s)
 
 def random_state(w=1):
     s = ""
@@ -170,6 +171,7 @@ def find_identity_sha3(w=1, rounds=1):
     gs = set()
     for p in u.sizes:
         gs.add(u.sizes[p])
+    print(u.sizes)
     print(gs)
 
 
