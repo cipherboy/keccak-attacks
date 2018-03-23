@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import hash_framework as hf
-import itertools, random
+import itertools, random, functools, math
 
 from ufds import UFDS
 
@@ -114,8 +114,7 @@ def fiota(w, s, i):
 
 
 def sha3r(w, s, r):
-    # return iota(w, chi(w, pi(w, rho(w, theta(w, s)))), r)
-    return ftheta(w, s)
+    return iota(w, chi(w, pi(w, rho(w, theta(w, s)))), r)
 
 
 def random_state(w=1):
@@ -262,7 +261,7 @@ def to_number(w, s):
             ns.append('F')
     return int(''.join(ns).replace('F', '0').replace('T', '1'), 2)
 
-def find_identity_sha3(w=1, rounds=1):
+def find_identity_sha3(w=1, rounds=1, func=sha3r):
     print("Creating UFDS data structure...")
     u = UFDS(2**(25*w))
 
@@ -270,7 +269,7 @@ def find_identity_sha3(w=1, rounds=1):
     for i in range(0, 2**(25*w)):
         s = to_state(w, i)
         for r in range(0, rounds):
-            s = sha3r(w, s, r)
+            s = func(w, s, r)
 
         j = to_number(w, s)
         u.union(i, j)
@@ -308,11 +307,37 @@ def profile_func(func):
     ps.print_stats()
     print(hf.boolean.get_simplify_stats())
 
+def call_prfuncs(w, s, r, prfunc=[]):
+    ns = s
+    for i in range(0, len(prfunc)):
+        ns = prfunc[i](w, ns, r)
+
+    return ns
+
 def a():
     import sys
-    assert(len(sys.argv) == 2)
+    assert(len(sys.argv) == 3)
     r = int(sys.argv[1])
-    find_identity_sha3(w=1, rounds=r)
+    specs = sys.argv[2]
 
-profile_func(a)
-# a()
+    rfunc = None
+    prfuncs = [lambda w, s, r: s]
+    prflen = 0
+    for spec in specs:
+        if spec == 't':
+            prfuncs.append(lambda w, s, r: ftheta(w, s))
+        elif spec == 'r':
+            prfuncs.append(lambda w, s, r: frho(w, s))
+        elif spec == 'p':
+            prfuncs.append(lambda w, s, r: fpi(w, s))
+        elif spec == 'c':
+            prfuncs.append(lambda w, s, r: fchi(w, s))
+        elif spec == 'i':
+            prfuncs.append(lambda w, s, r: fiota(w, s, r))
+
+    rfunc = functools.partial(call_prfuncs, prfunc=prfuncs)
+
+    find_identity_sha3(w=1, rounds=r, func=rfunc)
+
+# profile_func(a)
+a()
