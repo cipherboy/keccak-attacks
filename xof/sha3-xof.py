@@ -56,6 +56,7 @@ def sha3_xof_recreate(w, r, e, b):
     s = b // margin
     if s*margin != b:
         s += 1
+    s += 1
 
     algo = hf.algorithms.sha3(w=w, rounds=r)
     tag = "sha3-xof_recreate-w" + str(w) + "-r" + str(r) + '-e' + str(e) + "-s" + str(s)
@@ -75,7 +76,7 @@ def sha3_xof_recreate(w, r, e, b):
 
     hf.models.vars.write_header()
     hf.models.generate(algo, prefixes, rounds=r, bypass=True)
-    hf.models.vars.write_assign(['cdifferent', 'cknown', 'cchain'])
+    hf.models.vars.write_assign(['cdifferent', 'cknown', 'cchain', 'cloop'])
 
     cdifferent = ['and']
     for j in range(0, 25*w):
@@ -90,7 +91,7 @@ def sha3_xof_recreate(w, r, e, b):
                 cchain.append(('equal', 'h1s' + str(i) + 'out' + str(j), 'h1s' + str(i+1) + 'in' + str(j)))
                 cchain.append(('equal', 'h2s' + str(i) + 'out' + str(j), 'h2s' + str(i+1) + 'in' + str(j)))
         cchain = tuple(cchain)
-        hf.models.vars.write_clause('cchain', cchain, '10-chain.txt')
+        hf.models.vars.write_clause('cchain', cchain, '15-chain.txt')
 
     cknown = ['and']
     for i in range(0, s):
@@ -100,6 +101,18 @@ def sha3_xof_recreate(w, r, e, b):
             cknown.append(('equal', 'h1s' + str(i) + 'out' + str(j), 'h2s' + str(i) + 'out' + str(j)))
     cknown = tuple(cknown)
     hf.models.vars.write_clause('cknown', cknown, '20-known.txt')
+
+
+    cloop = ['and']
+    for i in range(0, s):
+        for j in range(0, margin):
+            if i*margin + j < b:
+                continue
+            cloop.append(('equal', 'h1s' + str(i) + 'out' + str(j), 'h2s' + str(i) + 'out' + str(j)))
+    cloop = ('not', tuple(cloop))
+    hf.models.vars.write_clause('cloop', cloop, '25-loop.txt')
+
+
 
     m.collapse()
     m.build()
@@ -111,24 +124,24 @@ def sha3_xof_recreate(w, r, e, b):
         print("Run time: " + str(t2))
 
         for result in m.load_results():
-            o_s = ""
+            h1o_s = ""
             for j in range(0, 25*w):
-                o_s += result['h1s0in' + str(j)]
-            print("h1seed: " + str(o_s))
-            o_s = ""
+                h1o_s += result['h1s0in' + str(j)]
+            print("h1seed: " + str(h1o_s))
+            h2o_s = ""
             for j in range(0, 25*w):
-                o_s += result['h2s0in' + str(j)]
-            print("h2seed: " + str(o_s))
+                h2o_s += result['h2s0in' + str(j)]
+            print("h2seed: " + str(h2o_s))
 
             for i in range(0, s):
                 o_s = ""
                 for j in range(0, 25*w):
                     o_s += result['h1s' + str(i) + 'out' + str(j)]
-                print("\th1s" + str(i) + ": " + str(o_s))
+                print("\th1s" + str(i) + ": " + str(o_s) + " -- " + str(o_s == h1o_s) + " -- "  + str(o_s == h2o_s))
                 o_s = ""
                 for j in range(0, 25*w):
                     o_s += result['h2s' + str(i) + 'out' + str(j)]
-                print("\th2s" + str(i) + ": " + str(o_s))
+                print("\th2s" + str(i) + ": " + str(o_s) + " -- " + str(o_s == h1o_s) + " -- "  + str(o_s == h2o_s))
     if release:
         os.system("rm -rf *.txt *.bc *.concat *.out")
     print("")
